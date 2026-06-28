@@ -43,7 +43,7 @@ print("Calibration complete!")
 
 print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
-base_altitude = bmp280.altitude
+base_altitude = sum(bmp280.altitude for _ in range(10)) / 10
 base_time = time.monotonic()
 
 
