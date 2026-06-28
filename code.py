@@ -1,5 +1,3 @@
-##saker att göra: göra två separata modes där en är för när den åker upp och en är för när den börjar falla. 
-# Sen när den når marken byter den tillbaka till slow mode. Detta för att kunna mäta hastighet snabbare. 
 
 
 #Import all needed libraries
@@ -93,19 +91,34 @@ while True:
 
             print(f"X: {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f}, ")
             print(accelerometer.acceleration)
-    
-
         except RuntimeError:
             print("No acceleration data")
-
-        base_altitude = bmp280.altitude
-        base_time = time.monotonic()
         time.sleep(1.0)
-    # while true:
-    #measure speed =-3
-        # if speed < -2:
+    if speed >= -2:
+        try:
+            pressure_hpa = bmp280.pressure
+            altitude_m = bmp280.altitude - altitude_m_start
 
-        # if speed > -2
+            print(f"Air Pressure: {pressure_hpa:.2f} hPa")
+            print(f"Altitude: {altitude_m:.1f} meters")
+            print(f"Speed: {speed} m/s")
+        except RuntimeError:
+            print("No airpressure or altitude data")
 
-        #körs programmet
-        #if the drone accelerates the can while moving 
+        try:
+            current_x, current_y, current_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
+            relative_x = current_x - start_x
+            relative_y = current_y - start_y
+            relative_z = current_z - start_z
+
+            print(f"X: {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f}, ")
+            print(accelerometer.acceleration)
+        except RuntimeError:
+            print("No acceleration data")
+        time.sleep(0.01)
+
+    base_altitude = bmp280.altitude
+    base_time = time.monotonic()
+
+       
+
