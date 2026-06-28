@@ -13,7 +13,7 @@ import adafruit_adxl34x
 import adafruit_ccs811
 
 with open("/data.csv", "a") as f:
-            f.write(f"time, carbon dioxide,pressure, altitude,speed,temperature,humidity,relative x,relative y,relative z\n")
+            f.write(f"time, carbon dioxide,pressure, altitude,speed,temperature,humidity,relative x,relative y,relative z,calibration\n")
 
 # average altitude value for stabilty
 def get_altitude_avg(samples):
@@ -42,6 +42,7 @@ start_x, start_y, start_z = sum(accelerometer.raw_x for _ in range(10))/10, sum(
 print("Calibration complete")
 
 print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
+
 
 base_altitude = sum(bmp280.altitude for _ in range(10)) / 10
 base_time = time.monotonic()
@@ -109,8 +110,9 @@ while True:
         print(speed)
         print("slow")
         time.sleep(0.1)
-        with open("/data.csv", "a") as f:
-            f.write(f"{time.monotonic()-base_time},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z}\n")
+        with open("/data.csv", "a", encoding="UTF8") as f:
+            f.write("")
+            f.write(f"{time.monotonic()-base_time},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z},Offset: {start_x} Y: {start_y} Z: {start_z}\n")
 
     elif speed <= -2:
         try:
