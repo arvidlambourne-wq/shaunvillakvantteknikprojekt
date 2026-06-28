@@ -32,16 +32,17 @@ bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x77)
 
 bmp280.sea_level_pressure = 1013.25
 
-
+altitude_m_start = bmp280.altitude
 
 
 # calibrating step
 start_x, start_y, start_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
-altitude_m_start = sum(bmp280.altitude for _ in range(10)) / 10
+print("Calibration complete!")
 
+print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
+base_altitude = bmp280.altitude
 base_time = time.monotonic()
-base_altitude =  sum(bmp280.altitude for _ in range(10)) / 10
 
 
 while True:
@@ -131,6 +132,9 @@ while True:
         print(speed)
         print("fast")
         time.sleep(0.01)
+        with open("/data.csv", "a") as f:
+            f.write(f"{time.monotonic()-base_time}, -, -,{altitude_m},{speed}, -, -,{relative_x},{relative_y},{relative_z}\n")
+
 
     base_altitude = current_altitude
     base_time = time.monotonic()
