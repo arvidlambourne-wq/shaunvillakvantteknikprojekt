@@ -32,18 +32,16 @@ bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x77)
 
 bmp280.sea_level_pressure = 1013.25
 
-altitude_m_start = bmp280.altitude
 
 
-print("Calibrating: keep the CanSat still")
-time.sleep(1.0) 
+
+# calibrating step
 start_x, start_y, start_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
-print("Calibration complete!")
+altitude_m_start = sum(bmp280.altitude for _ in range(10)) / 10
 
-print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
-base_altitude = bmp280.altitude
 base_time = time.monotonic()
+base_altitude =  sum(bmp280.altitude for _ in range(10)) / 10
 
 
 while True:
@@ -112,7 +110,7 @@ while True:
     elif speed <= -2:
         try:
             pressure_hpa = bmp280.pressure
-            altitude_m = bmp280.altitude - altqitude_m_start
+            altitude_m = bmp280.altitude - altitude_m_start
 
             print(f"Air Pressure: {pressure_hpa} hPa")
             print(f"Altitude: {altitude_m} meters")
