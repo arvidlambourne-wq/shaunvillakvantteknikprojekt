@@ -52,7 +52,7 @@ while True:
     time_elapsed = time.monotonic()-base_time
     speed= distance_traveled/time_elapsed
 
-    if speed < -2: 
+    if speed > -2: 
         try:
             carbondioxide = ccs811.eco2
             
@@ -102,8 +102,8 @@ while True:
         print(speed)
         print("slow")
         time.sleep(0.1)
-        time.sleep(1.0)
-    elif speed >= -2:
+        time.sleep(1)
+    elif speed <= -2:
         try:
             pressure_hpa = bmp280.pressure
             altitude_m = bmp280.altitude - altitude_m_start
