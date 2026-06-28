@@ -102,7 +102,6 @@ while True:
         print(speed)
         print("slow")
         time.sleep(0.1)
-        time.sleep(1)
     elif speed <= -2:
         try:
             pressure_hpa = bmp280.pressure
