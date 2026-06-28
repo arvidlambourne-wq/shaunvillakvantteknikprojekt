@@ -13,6 +13,10 @@ import adafruit_adxl34x
 import adafruit_ccs811
 
 
+# average altitude value for stabilty
+def get_altitude_avg(samples):
+    return sum(bmp280.altitude for _ in range(samples)) / samples
+    
 #Define sensors and protocols
 i2c = busio.I2C(board.SCL, board.SDA)
 ow_bus = OneWireBus(board.D13)
@@ -43,7 +47,8 @@ base_time = time.monotonic()
 
 
 while True:
-    distance_traveled = bmp280.altitude - base_altitude
+    current_altitude = get_altitude_avg(3)
+    distance_traveled = current_altitude - base_altitude
     time_elapsed = time.monotonic()-base_time
     speed= distance_traveled/time_elapsed
 
@@ -73,6 +78,7 @@ while True:
                 temperature = sensor.temperature
                 print(f"Temperature: {temperature}°C")
 
+
                 
         except RuntimeError:
             print("No temperature data")
@@ -93,8 +99,11 @@ while True:
             print(accelerometer.acceleration)
         except RuntimeError:
             print("No acceleration data")
+        print(speed)
+        print("slow")
+        time.sleep(0.1)
         time.sleep(1.0)
-    if speed >= -2:
+    elif speed >= -2:
         try:
             pressure_hpa = bmp280.pressure
             altitude_m = bmp280.altitude - altitude_m_start
@@ -115,9 +124,12 @@ while True:
             print(accelerometer.acceleration)
         except RuntimeError:
             print("No acceleration data")
+        print(speed)
+        print("fast")
+        time.sleep(0.01)
         time.sleep(0.01)
 
-    base_altitude = bmp280.altitude
+    base_altitude = current_altitude
     base_time = time.monotonic()
 
        
