@@ -38,8 +38,8 @@ altitude_m_start = bmp280.altitude
 
 
 # calibrating step
-start_x, start_y, start_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
-print("Calibration complete!")
+start_x, start_y, start_z = sum(accelerometer.raw_x for _ in range(10))/10, sum(accelerometer.raw_y for _ in range(10))/10, sum(accelerometer.raw_z for _ in range(10))/10
+print("Calibration complete")
 
 print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
@@ -52,7 +52,9 @@ while True:
     pressure_hpa = "-"
     altitude_m = "-"
     humidity = "-"
-    relative_x = relative_y = relative_z = "-"
+    relative_x = "-" 
+    relative_y = "-"
+    relative_z = "-"
     temperature = "-"
     current_altitude = get_altitude_avg(3)
     distance_traveled = current_altitude - base_altitude
