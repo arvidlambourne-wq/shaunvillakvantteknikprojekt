@@ -1,3 +1,7 @@
+##saker att göra: göra två separata modes där en är för när den åker upp och en är för när den börjar falla. 
+# Sen när den når marken byter den tillbaka till slow mode. Detta för att kunna mäta hastighet snabbare. 
+
+
 #Import all needed libraries
 import time
 import board
@@ -9,6 +13,7 @@ import busio
 import adafruit_bmp280
 import adafruit_adxl34x
 import adafruit_ccs811
+
 
 #Define sensors and protocols
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -26,75 +31,81 @@ bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x77)
 bmp280.sea_level_pressure = 1013.25
 
 altitude_m_start = bmp280.altitude
+
+
 print("Calibrating: keep the CanSat still")
 time.sleep(1.0) 
-
-
-start_x, start_y, start_z = accelerometer.acceleration
-
+start_x, start_y, start_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
 print("Calibration complete!")
-print(f"Offset: {start_x:.2f}, Y: {start_y:.2f}, Z: {start_z:.2f}")
+
+print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
 base_altitude = bmp280.altitude
 base_time = time.monotonic()
 
 
 while True:
-
-    try:
-        carbondioxide = ccs811.eco2
-        total_volatile_compounds = ccs811.tvoc
-        
-        print(f"Carbondioxide {carbondioxide} ppm")
-        print(f"Total_volatile_compounds {total_volatile_compounds} ppb")
-    except RuntimeError:
-        print("No air quality data")
-
     distance_traveled = bmp280.altitude - base_altitude
     time_elapsed = time.monotonic()-base_time
     speed= distance_traveled/time_elapsed
 
-    try:
-        pressure_hpa = bmp280.pressure
-        altitude_m = bmp280.altitude - altitude_m_start
-
-        print(f"Air Pressure: {pressure_hpa:.2f} hPa")
-        print(f"Altitude: {altitude_m:.1f} meters")
-        print(f"Speed: {speed} m/s")
-
-    except RuntimeError:
-        print("No airpressure or altitude data")
-
-    try:
-        if not ds18b20_sensors:
-            devices = ow_bus.scan()
-            ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices]
-        for sensor in ds18b20_sensors:
-            temperature = sensor.temperature
-            print(f"Temperature: {temperature}°C")
-
+    if speed < -2: 
+        try:
+            carbondioxide = ccs811.eco2
             
-    except RuntimeError:
-        print("No temperature data")
-        ds18b20_sensors = []
-    try:
-        humidity = dht_sensor.humidity
-        print(f"Humidity: {humidity}%")
-    except RuntimeError:
-        print("OBS: Unreliable humidity data")
+            print(f"Carbondioxide {carbondioxide} ppm")
+        except RuntimeError:
+            print("No air quality data")
 
-    try:
-        current_x, current_y, current_z = accelerometer.acceleration
-        relative_x = current_x - start_x
-        relative_y = current_y - start_y
-        relative_z = current_z - start_z
+        try:
+            pressure_hpa = bmp280.pressure
+            altitude_m = bmp280.altitude - altitude_m_start
 
-        print(f" {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f} m/s^2")
-  
+            print(f"Air Pressure: {pressure_hpa:.2f} hPa")
+            print(f"Altitude: {altitude_m:.1f} meters")
+            print(f"Speed: {speed} m/s")
+        except RuntimeError:
+            print("No airpressure or altitude data")
 
-    except RuntimeError:
-        print("No acceleration data")
+        try:
+            if not ds18b20_sensors:
+                devices = ow_bus.scan()
+                ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices]
+            for sensor in ds18b20_sensors:
+                temperature = sensor.temperature
+                print(f"Temperature: {temperature}°C")
 
-    base_altitude = bmp280.altitude
-    base_time = time.monotonic()
-    time.sleep(1.0)
+                
+        except RuntimeError:
+            print("No temperature data")
+            ds18b20_sensors = []
+        try:
+            humidity = dht_sensor.humidity
+            print(f"Humidity: {humidity}%")
+        except RuntimeError:
+            print("OBS: Unreliable humidity data")
+
+        try:
+            current_x, current_y, current_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
+            relative_x = current_x - start_x
+            relative_y = current_y - start_y
+            relative_z = current_z - start_z
+
+            print(f"X: {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f}, ")
+            print(accelerometer.acceleration)
+    
+
+        except RuntimeError:
+            print("No acceleration data")
+
+        base_altitude = bmp280.altitude
+        base_time = time.monotonic()
+        time.sleep(1.0)
+    # while true:
+    #measure speed =-3
+        # if speed < -2:
+
+        # if speed > -2
+
+        #körs programmet
+        #if the drone accelerates the can while moving 
