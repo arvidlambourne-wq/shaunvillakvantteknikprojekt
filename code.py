@@ -12,6 +12,8 @@ import adafruit_bmp280
 import adafruit_adxl34x
 import adafruit_ccs811
 
+with open("/data.csv", "a") as f:
+            f.write(f"time, carbon dioxide,pressure, altitude,speed,temperature,humidity,relative x,relative y,relative z\n")
 
 # average altitude value for stabilty
 def get_altitude_avg(samples):
