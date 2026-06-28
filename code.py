@@ -47,6 +47,12 @@ base_time = time.monotonic()
 
 
 while True:
+    carbondioxide = "-"
+    pressure_hpa = "-"
+    altitude_m = "-"
+    humidity = "-"
+    relative_x = relative_y = relative_z = "-"
+    temperature = "-"
     current_altitude = get_altitude_avg(3)
     distance_traveled = current_altitude - base_altitude
     time_elapsed = time.monotonic()-base_time
@@ -64,8 +70,8 @@ while True:
             pressure_hpa = bmp280.pressure
             altitude_m = bmp280.altitude - altitude_m_start
 
-            print(f"Air Pressure: {pressure_hpa:.2f} hPa")
-            print(f"Altitude: {altitude_m:.1f} meters")
+            print(f"Air Pressure: {pressure_hpa} hPa")
+            print(f"Altitude: {altitude_m} meters")
             print(f"Speed: {speed} m/s")
         except RuntimeError:
             print("No airpressure or altitude data")
@@ -76,13 +82,11 @@ while True:
                 ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices]
             for sensor in ds18b20_sensors:
                 temperature = sensor.temperature
-                print(f"Temperature: {temperature}°C")
-
-
-                
+                print(f"Temperature: {temperature}°C")     
         except RuntimeError:
             print("No temperature data")
             ds18b20_sensors = []
+
         try:
             humidity = dht_sensor.humidity
             print(f"Humidity: {humidity}%")
@@ -95,20 +99,23 @@ while True:
             relative_y = current_y - start_y
             relative_z = current_z - start_z
 
-            print(f"X: {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f}, ")
+            print(f"X: {relative_x}, Y: {relative_y}, Z: {relative_z}, ")
             print(accelerometer.acceleration)
         except RuntimeError:
             print("No acceleration data")
         print(speed)
         print("slow")
         time.sleep(0.1)
+        with open("/data.csv", "a") as f:
+            f.write(f"{time.monotonic()-base_time},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z}\n")
+
     elif speed <= -2:
         try:
             pressure_hpa = bmp280.pressure
-            altitude_m = bmp280.altitude - altitude_m_start
+            altitude_m = bmp280.altitude - altqitude_m_start
 
-            print(f"Air Pressure: {pressure_hpa:.2f} hPa")
-            print(f"Altitude: {altitude_m:.1f} meters")
+            print(f"Air Pressure: {pressure_hpa} hPa")
+            print(f"Altitude: {altitude_m} meters")
             print(f"Speed: {speed} m/s")
         except RuntimeError:
             print("No airpressure or altitude data")
@@ -119,13 +126,12 @@ while True:
             relative_y = current_y - start_y
             relative_z = current_z - start_z
 
-            print(f"X: {relative_x:.2f}, Y: {relative_y:.2f}, Z: {relative_z:.2f}, ")
+            print(f"X: {relative_x}, Y: {relative_y}, Z: {relative_z}, ")
             print(accelerometer.acceleration)
         except RuntimeError:
             print("No acceleration data")
         print(speed)
         print("fast")
-        time.sleep(0.01)
         time.sleep(0.01)
 
     base_altitude = current_altitude
