@@ -36,8 +36,18 @@ altitude_m_start = bmp280.altitude
 
 
 # calibrating step
-start_x, start_y, start_z = sum(accelerometer.raw_x for _ in range(10))/10, sum(accelerometer.raw_y for _ in range(10))/10, sum(accelerometer.raw_z for _ in range(10))/10
-print("Calibration complete")
+readings_x, readings_y, readings_z = [], [], []
+
+for _ in range(50):
+    readings_x.append(accelerometer.raw_x)
+    readings_z.append(accelerometer.raw_z)
+    readings_y.append(accelerometer.raw_y)
+    time.sleep(0.2)
+start_x = sum(readings_x) / len(readings_x)
+start_y = sum(readings_y) / len(readings_y)
+start_z = sum(readings_z) / len(readings_z)
+
+
 
 print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
 
@@ -59,7 +69,7 @@ while True:
     distance_traveled = current_altitude - base_altitude
     time_elapsed = time.monotonic()-base_time
     speed= distance_traveled/time_elapsed
-
+    
     if speed > -2: 
         try:
             carbondioxide = ccs811.eco2
@@ -108,7 +118,7 @@ while True:
         print(speed)
         print("slow")
         time.sleep(0.1)
-        print(f"{time.monotonic()-base_time},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z},Offset: {start_x} Y: {start_y} Z: {start_z}\n")
+        print(f"{time.monotonic()},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z},Offset: {start_x} Y: {start_y} Z: {start_z}\n")
 
     elif speed <= -2:
         try:
@@ -134,11 +144,12 @@ while True:
         print(speed)
         print("fast")
         time.sleep(0.01)
-        print(f"{time.monotonic()-base_time}, -, -,{altitude_m},{speed}, -, -,{relative_x},{relative_y},{relative_z}\n")
+        print(f"{time.monotonic()}, -, -,{altitude_m},{speed}, -, -,{relative_x},{relative_y},{relative_z}\n")
 
 
     base_altitude = current_altitude
     base_time = time.monotonic()
 
-       
+    
 
+       
