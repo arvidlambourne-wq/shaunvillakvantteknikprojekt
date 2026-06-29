@@ -1,7 +1,6 @@
-
-
 #Import all needed libraries
 import time
+import random
 import board
 import digitalio
 from adafruit_onewire.bus import OneWireBus
@@ -12,6 +11,9 @@ import adafruit_bmp280
 import adafruit_adxl34x
 import adafruit_ccs811
 
+switch = digitalio.DigitalInOut(board.D24)
+switch.switch_to_input(pull=digitalio.Pull.DOWN)
+DEBUG = switch.value
 
 # average altitude value for stabilty
 def get_altitude_avg(samples):
@@ -19,14 +21,17 @@ def get_altitude_avg(samples):
     
 #Define sensors and protocols
 i2c = busio.I2C(board.SCL, board.SDA)
-ow_bus = OneWireBus(board.D13)
+ow_bus = OneWireBus(board.D12)
 dht_sensor = adafruit_dht.DHT11(board.D5) #Air moisture sensor
 devices = ow_bus.scan()
 ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices] #thermometer
 
 
 # Define i2c addresses
-ccs811 = adafruit_ccs811.CCS811(i2c, address=0x5a) #air quality sensor
+try:
+    ccs811 = adafruit_ccs811.CCS811(i2c, address=0x5a) #air quality sensor
+except:
+    ccs811 = None
 accelerometer = adafruit_adxl34x.ADXL345(i2c, address=0x53)
 bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x77)
 
@@ -36,120 +41,138 @@ altitude_m_start = bmp280.altitude
 
 
 # calibrating step
-readings_x, readings_y, readings_z = [], [], []
+readings = []
 
-for _ in range(50):
-    readings_x.append(accelerometer.raw_x)
-    readings_z.append(accelerometer.raw_z)
-    readings_y.append(accelerometer.raw_y)
-    time.sleep(0.2)
-start_x = sum(readings_x) / len(readings_x)
-start_y = sum(readings_y) / len(readings_y)
-start_z = sum(readings_z) / len(readings_z)
+# Calibration wait
+led = digitalio.DigitalInOut(board.LED)
+led.direction = digitalio.Direction.OUTPUT
+led.value = False
+
+calibration_start = time.monotonic()
+now = time.monotonic()
+while now - calibration_start < 5:
+    if now % 1 < 0.5:
+        led.value = True
+    else:
+        led.value = False
+
+    now = time.monotonic()
+
+CALIBRATION_TIME = 2 # s
+READING_INTERVAL = .2 # s
+
+led.value = True
+for _ in range(CALIBRATION_TIME // READING_INTERVAL):
+    readings.append(accelerometer.acceleration)
+    time.sleep(READING_INTERVAL)
+led.value = False
 
 
+num_elements = len(readings)
 
-print(f"Offset: {start_x}, Y: {start_y}, Z: {start_z}")
+offset_x_acc = sum(read[0] for read in readings) / num_elements
+offset_y_acc = sum(read[1] for read in readings) / num_elements
+offset_z_acc = sum(read[2] for read in readings) / num_elements
 
 
-base_altitude = sum(bmp280.altitude for _ in range(10)) / 10
+if DEBUG:
+    print(f"Offset: {offset_x_acc}, Y: {offset_y_acc}, Z: {offset_z_acc}")
+
+
+base_altitude = get_altitude_avg(10)
 base_time = time.monotonic()
 
+try:
+    f = open(f"/{random.randint(10000,99999)}.csv", "a")
+except OSError as e:
+    f = None
+    print(f"File error!: {e}")
 
 while True:
-    carbondioxide = "-"
-    pressure_hpa = "-"
-    altitude_m = "-"
-    humidity = "-"
-    relative_x = "-" 
-    relative_y = "-"
-    relative_z = "-"
-    temperature = "-"
-    current_altitude = get_altitude_avg(3)
-    distance_traveled = current_altitude - base_altitude
-    time_elapsed = time.monotonic()-base_time
-    speed= distance_traveled/time_elapsed
+    carbondioxide = None
+    pressure_hpa = None
+    altitude_m = None
+    humidity = None
+    compensated_x = None 
+    compensated_y = None
+    compensated_z = None
+    temperature = None
     
-    if speed > -2: 
-        try:
-            carbondioxide = ccs811.eco2
-            
+    try:
+        carbondioxide = ccs811.eco2
+        if DEBUG:
             print(f"Carbondioxide {carbondioxide} ppm")
-        except RuntimeError:
+    except:
+        if DEBUG:
             print("No air quality data")
 
-        try:
-            pressure_hpa = bmp280.pressure
-            altitude_m = bmp280.altitude - altitude_m_start
-
+    try:
+        pressure_hpa = bmp280.pressure
+        if DEBUG:
             print(f"Air Pressure: {pressure_hpa} hPa")
+    except:
+        if DEBUG:
+            print("No airpressure")
+
+    try:
+        altitude_m = bmp280.altitude - altitude_m_start
+        if DEBUG:
             print(f"Altitude: {altitude_m} meters")
-            print(f"Speed: {speed} m/s")
-        except RuntimeError:
+    except:
+        if DEBUG:
             print("No airpressure or altitude data")
 
-        try:
-            if not ds18b20_sensors:
-                devices = ow_bus.scan()
-                ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices]
-            for sensor in ds18b20_sensors:
-                temperature = sensor.temperature
+    try:
+        if not ds18b20_sensors:
+            devices = ow_bus.scan()
+            ds18b20_sensors = [DS18X20(ow_bus, device) for device in devices]
+        
+        for sensor in ds18b20_sensors:
+            temperature = sensor.temperature
+            if DEBUG:
                 print(f"Temperature: {temperature}°C")     
-        except RuntimeError:
+    except:
+        if DEBUG:
             print("No temperature data")
-            ds18b20_sensors = []
+        ds18b20_sensors = []
 
-        try:
-            humidity = dht_sensor.humidity
+    try:
+        humidity = dht_sensor.humidity
+        if DEBUG:
             print(f"Humidity: {humidity}%")
-        except RuntimeError:
+    except:
+        if DEBUG:
             print("OBS: Unreliable humidity data")
 
-        try:
-            current_x, current_y, current_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
-            relative_x = current_x - start_x
-            relative_y = current_y - start_y
-            relative_z = current_z - start_z
-
-            print(f"X: {relative_x}, Y: {relative_y}, Z: {relative_z}, ")
+    try:
+        current_x, current_y, current_z = accelerometer.acceleration
+        compensated_x = current_x - offset_x_acc
+        compensated_y = current_y - offset_y_acc
+        compensated_z = current_z - offset_z_acc
+        if DEBUG:
+            print(f"X: {compensated_x}, Y: {compensated_y}, Z: {compensated_z}, ")
             print(accelerometer.acceleration)
-        except RuntimeError:
+    except:
+        if DEBUG:
             print("No acceleration data")
-        print(speed)
-        print("slow")
-        time.sleep(0.1)
-        print(f"{time.monotonic()},{carbondioxide},{pressure_hpa},{altitude_m},{speed},{temperature},{humidity},{relative_x},{relative_y},{relative_z},Offset: {start_x} Y: {start_y} Z: {start_z}\n")
 
-    elif speed <= -2:
-        try:
-            pressure_hpa = bmp280.pressure
-            altitude_m = bmp280.altitude - altitude_m_start
+    time_elapsed = time.monotonic() - base_time
 
-            print(f"Air Pressure: {pressure_hpa} hPa")
-            print(f"Altitude: {altitude_m} meters")
-            print(f"Speed: {speed} m/s")
-        except RuntimeError:
-            print("No airpressure or altitude data")
+    values_to_output = [
+        time_elapsed,
+        compensated_x,
+        compensated_y,
+        compensated_z,
+        pressure_hpa,
+        altitude_m,
+        temperature,
+        humidity,
+        carbondioxide
+    ]
 
-        try:
-            current_x, current_y, current_z = accelerometer.raw_x, accelerometer.raw_y, accelerometer.raw_z
-            relative_x = current_x - start_x
-            relative_y = current_y - start_y
-            relative_z = current_z - start_z
-
-            print(f"X: {relative_x}, Y: {relative_y}, Z: {relative_z}, ")
-            print(accelerometer.acceleration)
-        except RuntimeError:
-            print("No acceleration data")
-        print(speed)
-        print("fast")
-        time.sleep(0.01)
-        print(f"{time.monotonic()}, -, -,{altitude_m},{speed}, -, -,{relative_x},{relative_y},{relative_z}\n")
-
-
-    base_altitude = current_altitude
-    base_time = time.monotonic()
-
-    
-
-       
+    if f is not None:
+        f.write(",".join(str(value) for value in values_to_output) + "\n")
+        f.flush()
+        # print("Wrote file!")
+    else:
+        print("f is None!")
